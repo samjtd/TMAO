@@ -1,0 +1,35 @@
+library(tidyverse)
+UserLoop = readline(prompt="Enter number of files ")
+IntUserLoop = as.numeric(UserLoop)
+Counter = 0
+Miss = 0
+ZeroHits = 0
+BigData = data.frame()
+while (Counter < IntUserLoop) {
+	Counter = Counter + 1
+	StrCounter = toString(Counter)
+	FileName = paste(StrCounter,'_Protein_BLAST.txt',sep = '')
+	if(file.exists(FileName) == TRUE){
+		blast = read_delim(FileName, delim='\t', col_names=F)
+		colnames(blast) = c('qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'qlen')
+		blast$coverage = ((blast$qend-blast$qstart)/blast$qlen)*100
+		blast$identity = Counter
+		blast$genus = GenusSheet$Strain[Counter]
+		wanted = filter(blast, coverage >= 90, pident >= 70)
+		BigData = rbind(wanted, BigData)
+	}
+	if(file.exists(FileName) == FALSE){
+		Miss = Miss + 1 }
+	}
+GeneNumbers = table(BigData$sseqid, BigData$identity)
+ZeroHits = (IntUserLoop - ncol(GeneNumbers)) - Miss
+write.csv(BigData, 'BigData.csv')	
+#Gives what is needed from BigData sheets
+a = as.data.frame(table(BigData$sseqid,BigData$identity,BigData$genus))
+#Removes 0 hits
+b = a[!(a$Freq == 0),]
+#Removes unecessary values
+b$Var2 = NULL
+b$Freq = NULL
+#Creates final data frame with Freq of each gene appearance
+UniqueValues = as.data.frame(table(b))

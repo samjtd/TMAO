@@ -1,0 +1,30 @@
+	#!/bin/bash
+Start=$(date)
+read -p 'Enter number of iterations ' UserLoop
+#Linux lists start at 0. Stops first entry being omitted
+let UserLoop-=1
+#Make sure csv being used is formatted correctly and has been run through dos2unix
+read -p 'Enter name of file ' FileName
+#Add each col of csv to an array
+readarray -t Entry < <(cut -d, -f1 $FileName)
+readarray -t Organism < <(cut -d, -f2 $FileName)
+readarray -t Strain < <(cut -d, -f3 $FileName)
+readarray -t RefSeq < <(cut -d, -f4 $FileName)
+readarray -t RefID < <(cut -d, -f5 $FileName)
+#Initialising loop counter
+Counter=0
+#BLAST loop, downloads .faa files from NCBI RefSeq database and uses them to run blastP vs TMAO_gene_db, deletes downloads
+until [ $Counter -gt $UserLoop ]; do
+	echo $Counter
+	echo "${Organism[$Counter]}" "${Strain[$Counter]}"
+	wget ${RefSeq[$Counter]}${RefID[$Counter]}'_protein.faa.gz'
+	gunzip ${RefID[$Counter]}'_protein.faa.gz'	
+	blastp -db TMAO_gene_db -query ${RefID[$Counter]}'_protein.faa' -out BLASTS/${Entry[Counter]}'_Protein_Blast.txt' -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen"
+	rm ${RefID[$Counter]}'_protein.faa'
+	let Counter+=1
+	echo $Start
+	date
+	echo $Start $(date) $Counter > Times.txt
+done
+Finish=$(date)
+echo $Start $Finish > Times.txt
